@@ -308,6 +308,7 @@ SDL_Window* sta_initSDLWindow(SDL_GLContext* context, int screenWidth, int scree
   loadExtensions();
 
   glEnable(GL_BLEND);
+  glEnable(GL_DEPTH_TEST);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glViewport(0, 0, screenWidth, screenHeight);
 

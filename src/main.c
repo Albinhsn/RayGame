@@ -42,7 +42,6 @@ int main()
   Timer gameTimer = {};
   sta_startTimer(&gameTimer);
 
-  u32 idx = 0;
   while (true)
   {
 
@@ -53,13 +52,19 @@ int main()
 
     if (shouldUpdate(&gameTimer))
     {
-      idx = (idx + 1) % 6;
+      map.playerA += 0.1f;
+      if (map.playerA >= PI)
+      {
+        map.playerA = -PI;
+      }
     }
 
     sta_initNewFrame(WHITE);
 
     render2DMap(&renderer, &map);
+    render3DMap(&renderer, &map);
 
     SDL_GL_SwapWindow(renderer.window);
   }
+
 }

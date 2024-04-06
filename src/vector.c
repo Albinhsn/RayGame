@@ -234,6 +234,14 @@ Vec3i32 MatrixToVec3i32(Matrix4x4 m)
   res.z = m.m[2][0] / scale;
   return res;
 }
+
+void clearMat4x4(Matrix4x4* m)
+{
+  for (i32 i = 0; i < 16; i++)
+  {
+    m->a[i] = 0;
+  }
+}
 void clearMat3x3(Matrix3x3* m)
 {
   for (i32 i = 0; i < 9; i++)
@@ -241,27 +249,29 @@ void clearMat3x3(Matrix3x3* m)
     m->a[i] = 0;
   }
 }
-void getTransformationMatrix(Matrix3x3* res, f32 x, f32 y, f32 width, f32 height)
+void getTransformationMatrix(Matrix4x4* res, f32 x, f32 y, f32 z, f32 width, f32 height)
 {
 
   f32       transformX   = x * 0.01f;
   f32       transformY   = y * 0.01f;
-  Matrix3x3 translationM = {
-      1,          0,          0, //
-      0,          1,          0, //
-      transformX, transformY, 1  //
+  f32       transformZ   = z * 0.01f;
+  Matrix4x4 translationM = {
+      1,          0,          0,          0, //
+      0,          1,          0,          0, //
+      0,          0,          1,          0, //
+      transformX, transformY, transformZ, 1, //
   };
 
   float     scaleX = width * 0.01f;
   float     scaleY = height * 0.01f;
 
-  Matrix3x3 scaleM = {
-      scaleX, 0,      0, //
-      0,      scaleY, 0, //
-      0,      0,      1  //
+  Matrix4x4 scaleM = {
+      scaleX, 0,      0, 0, //
+      0,      scaleY, 0, 0, //
+      0,      0,      1, 0, //
+      0,      0,      0, 1  //
   };
-  clearMat3x3(res);
-  MatMul3x3(res, &translationM, &scaleM);
+  MatMul4x4(res, &translationM, &scaleM);
 }
 
 Matrix3x3 invertMat3x3(Matrix3x3 a)
@@ -333,7 +343,9 @@ Matrix4x4 lookAt(Vec3f32 eye, Vec3f32 center, Vec3f32 up)
     minV.m[2][i] = z.pos[i];
     tr.m[i][3]   = -center.pos[i];
   }
-  return MatMul4x4(minV, tr);
+  Matrix4x4 m = {};
+  MatMul4x4(&m, &minV, &tr);
+  return m;
 }
 
 Matrix3x3 transposeMat3x3(Matrix3x3 m)
@@ -357,7 +369,6 @@ Matrix4x4 transposeMat4x4(Matrix4x4 m)
   return res;
 }
 
-
 void MatMul3x3(Matrix3x3* res, Matrix3x3* a, Matrix3x3* b)
 {
   for (int i = 0; i < 3; i++)
@@ -372,40 +383,18 @@ void MatMul3x3(Matrix3x3* res, Matrix3x3* a, Matrix3x3* b)
   }
 }
 
-Matrix4x4 MatMul4x4(Matrix4x4 a, Matrix4x4 b)
+void MatMul4x4(Matrix4x4* res, Matrix4x4* a, Matrix4x4* b)
 {
-  f32       a00 = a.m[0][0], a01 = a.m[0][1], a02 = a.m[0][2], a03 = a.m[0][3];
-  f32       a10 = a.m[1][0], a11 = a.m[1][1], a12 = a.m[1][2], a13 = a.m[1][3];
-  f32       a20 = a.m[2][0], a21 = a.m[2][1], a22 = a.m[2][2], a23 = a.m[2][3];
-  f32       a30 = a.m[3][0], a31 = a.m[3][1], a32 = a.m[3][2], a33 = a.m[3][3];
-
-  f32       b00 = b.m[0][0], b01 = b.m[0][1], b02 = b.m[0][2], b03 = b.m[0][3];
-  f32       b10 = b.m[1][0], b11 = b.m[1][1], b12 = b.m[1][2], b13 = b.m[1][3];
-  f32       b20 = b.m[2][0], b21 = b.m[2][1], b22 = b.m[2][2], b23 = b.m[2][3];
-  f32       b30 = b.m[3][0], b31 = b.m[3][1], b32 = b.m[3][2], b33 = b.m[3][3];
-
-  Matrix4x4 m;
-  m.m[0][0] = a00 * b00 + a01 * b10 + a02 * b20 + a03 * b30;
-  m.m[0][1] = a00 * b01 + a01 * b11 + a02 * b21 + a03 * b31;
-  m.m[0][2] = a00 * b02 + a01 * b12 + a02 * b22 + a03 * b32;
-  m.m[0][3] = a00 * b03 + a01 * b13 + a02 * b23 + a03 * b33;
-
-  m.m[1][0] = a10 * b00 + a11 * b10 + a12 * b20 + a13 * b30;
-  m.m[1][1] = a10 * b01 + a11 * b11 + a12 * b21 + a13 * b31;
-  m.m[1][2] = a10 * b02 + a11 * b12 + a12 * b22 + a13 * b32;
-  m.m[1][3] = a10 * b03 + a11 * b13 + a12 * b23 + a13 * b33;
-
-  m.m[2][0] = a20 * b00 + a21 * b10 + a22 * b20 + a23 * b30;
-  m.m[2][1] = a20 * b01 + a21 * b11 + a22 * b21 + a23 * b31;
-  m.m[2][2] = a20 * b02 + a21 * b12 + a22 * b22 + a23 * b32;
-  m.m[2][3] = a20 * b03 + a21 * b13 + a22 * b23 + a23 * b33;
-
-  m.m[3][0] = a30 * b00 + a31 * b10 + a32 * b20 + a33 * b30;
-  m.m[3][1] = a30 * b01 + a31 * b11 + a32 * b21 + a33 * b31;
-  m.m[3][2] = a30 * b02 + a31 * b12 + a32 * b22 + a33 * b32;
-  m.m[3][3] = a30 * b03 + a31 * b13 + a32 * b23 + a33 * b33;
-
-  return m;
+  for (int i = 0; i < 4; i++)
+  {
+    for (int j = 0; j < 4; j++)
+    {
+      for (int k = 0; k < 4; k++)
+      {
+        res->a[i + j * 4] += a->a[i + k * 4] * b->a[k + j * 4];
+      }
+    }
+  }
 }
 
 Matrix4x4 Vec3f32ToMatrix(Vec3f32 v)

@@ -76,13 +76,14 @@ enum TextureModel
 
 typedef enum TextureModel TextureModel;
 
-void sta_renderQuad(GLuint programId, GLuint vertexArrayId, GLuint vertexBufferId, Color* color, f32 x, f32 y, f32 width, f32 height);
-void                      sta_renderTextureTile(Renderer* renderer, f32 x, f32 y, f32 width, f32 height, u32 tiledTextureIdx, u32 textureIdx);
+void                      sta_renderQuad(GLuint programId, GLuint vertexArrayId, GLuint vertexBufferId, Color* color, f32 x, f32 y, f32 z, f32 width, f32 height);
+void sta_renderTextureTilePartOfCol(Renderer* renderer, f32 x, f32 y, f32 z, f32 width, f32 height, u32 tiledTextureIdx, u32 textureIdx, u32 splitBy, u32 splitIdx);
+void                      sta_renderTextureTile(Renderer* renderer, f32 x, f32 y, f32 z, f32 width, f32 height, u32 tiledTextureIdx, u32 textureIdx);
 void                      sta_initRenderer(Renderer* renderer, Font* font, const i32 screenWidth, const i32 screenHeight);
 void                      sta_renderUnfilledQuad(GLuint programId, GLuint vertexArrayId, GLuint vertexBufferId, Vec2f32 start, Vec2f32 end, u32 width, Color* color);
 void                      sta_renderLine(GLuint programId, GLuint vertexArrayId, GLuint vertexBufferId, Vec2f32 start, Vec2f32 end, u32 width, Color* color);
 void                      sta_updateWindowSize(SDL_Window* window, i32 width, i32 height);
-void sta_renderTexture(Renderer* renderer, Matrix3x3* transMatrix, u32 textureIdx);
+void                      sta_renderTexture(Renderer* renderer, Matrix4x4* transMatrix, u32 textureIdx);
 void                      sta_createLineVertexArray(GLuint* vertexArrayId, GLuint* vertexBufferId);
 void                      sta_renderTextCentered(Font* font, const char* text, Color* color, f32 x, f32 y, f32 fontSize, f32 spaceSize);
 void                      sta_renderTextStartsAt(Font* font, const char* text, Color* color, f32 x, f32 y, f32 fontSize, f32 spaceSize);

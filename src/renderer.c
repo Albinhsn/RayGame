@@ -16,9 +16,7 @@ void sta_updateWindowSize(SDL_Window* window, i32 width, i32 height)
 
 void sta_createLineVertexArray(GLuint* vertexArrayId, GLuint* vertexBufferId)
 {
-  GLfloat bufferData[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-
-  i32     indices[]     = {0, 1};
+  i32 indices[] = {0, 1};
 
   sta_glGenVertexArrays(1, vertexArrayId);
   sta_glBindVertexArray(*vertexArrayId);
@@ -41,10 +39,10 @@ void sta_createLineVertexArray(GLuint* vertexArrayId, GLuint* vertexBufferId)
 void sta_create2DQuadVertexArray(GLuint* vertexArrayId, GLuint* vertexBufferId)
 {
   GLfloat bufferData[20] = {
-      -1.0f, -1.0f, 0.0f, 1.0f, //
-      1.0f,  -1.0f, 1.0f, 1.0f, //
-      -1.0f, 1.0f,  0.0f, 0.0f, //
-      1.0f,  1.0f,  1.0f, 0.0f  //
+      -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, //
+      1.0f,  -1.0f, 0.0f, 1.0f, 1.0f, //
+      -1.0f, 1.0f,  0.0f, 0.0f, 0.0f, //
+      1.0f,  1.0f,  0.0f, 1.0f, 0.0f  //
   };
   int    indices[6] = {0, 1, 2, 1, 3, 2};
 
@@ -55,13 +53,13 @@ void sta_create2DQuadVertexArray(GLuint* vertexArrayId, GLuint* vertexBufferId)
 
   sta_glGenBuffers(1, vertexBufferId);
   sta_glBindBuffer(GL_ARRAY_BUFFER, *vertexBufferId);
-  sta_glBufferData(GL_ARRAY_BUFFER, 16 * sizeof(GLfloat), bufferData, GL_STATIC_DRAW);
+  sta_glBufferData(GL_ARRAY_BUFFER, 20 * sizeof(GLfloat), bufferData, GL_STATIC_DRAW);
 
   sta_glEnableVertexAttribArray(0);
   sta_glEnableVertexAttribArray(1);
 
-  sta_glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 4, 0);
-  sta_glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 4, (signed char*)NULL + (2 * sizeof(GLfloat)));
+  sta_glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 5, 0);
+  sta_glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 5, (signed char*)NULL + (3 * sizeof(GLfloat)));
 
   sta_glGenBuffers(1, &indexBufferId);
   sta_glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferId);
@@ -190,22 +188,24 @@ void sta_createShaderProgram(GLuint* programId, const char* vsLocation, const ch
   sta_glLinkProgram(*programId);
 }
 
-void sta_renderQuad(GLuint programId, GLuint vertexArrayId, GLuint vertexBufferId, Color* color, f32 x, f32 y, f32 width, f32 height)
+void sta_renderQuad(GLuint programId, GLuint vertexArrayId, GLuint vertexBufferId, Color* color, f32 x, f32 y, f32 z, f32 width, f32 height)
 {
   sta_glBindVertexArray(vertexArrayId);
   sta_glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);
 
-  f32   minX           = (x - width / 2) * 0.01f;
-  f32   maxX           = (x + width / 2) * 0.01f;
+  f32 minX = (x - width / 2) * 0.01f;
+  f32 maxX = (x + width / 2) * 0.01f;
 
-  f32   minY           = (y - height / 2)  * 0.01f;
-  f32   maxY           = (y + height / 2)  * 0.01f;
+  f32 minY = (y - height / 2) * 0.01f;
+  f32 maxY = (y + height / 2) * 0.01f;
+
+  z *= 0.01f;
 
   float bufferData[20] = {
-      minX, minY, 0.0f, //
-      maxX, minY, 0.0f, //
-      minX, maxY, 0.0f, //
-      maxX, maxY, 0.0f, //
+      minX, minY, z, //
+      maxX, minY, z, //
+      minX, maxY, z, //
+      maxX, maxY, z, //
 
   };
   sta_glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(GLfloat), bufferData, GL_STATIC_DRAW);
@@ -279,7 +279,7 @@ static void sta_setTextShaderParams(GLuint programId, Color* color)
   sta_glUniform4fv(location, 1, &c[0]);
 }
 
-void sta_renderTexture(Renderer* renderer, Matrix3x3* transMatrix, u32 textureIdx)
+void sta_renderTexture(Renderer* renderer, Matrix4x4* transMatrix, u32 textureIdx)
 {
   sta_glUseProgram(renderer->textureProgramId);
   sta_glBindVertexArray(renderer->textureVertexId);
@@ -292,16 +292,55 @@ void sta_renderTexture(Renderer* renderer, Matrix3x3* transMatrix, u32 textureId
     printf("failed to set transMatrix\n");
     exit(1);
   }
-  sta_glUniformMatrix3fv(location, 1, true, (f32*)transMatrix);
+  sta_glUniformMatrix4fv(location, 1, true, (f32*)transMatrix);
 
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
   sta_glBindVertexArray(0);
 }
 
-void sta_renderTextureTile(Renderer* renderer, f32 x, f32 y, f32 width, f32 height, u32 tiledTextureIdx, u32 textureIdx)
+void sta_renderTextureTilePartOfCol(Renderer* renderer, f32 x, f32 y, f32 z, f32 width, f32 height, u32 tiledTextureIdx, u32 textureIdx, u32 splitBy, u32 splitIdx)
 {
-  Matrix3x3 transMatrix = {};
-  getTransformationMatrix(&transMatrix, x, y, width, height);
+  Matrix4x4 transMatrix = {};
+  getTransformationMatrix(&transMatrix, x, y, z, width, height);
+
+  TextureTiled texture = renderer->tiledTextures[tiledTextureIdx];
+  u32          maxCol  = texture.texture->width / texture.dim;
+  u32          maxRow  = texture.texture->height / texture.dim;
+  u32          row     = textureIdx / maxCol;
+  u32          col     = textureIdx % maxCol;
+
+  if (row >= maxRow)
+  {
+    printf("SEVERE: Trying to access outside of texture, tiledTexture %d, %d vs %d, textureIdx: %d, mr %d, mc %d\n", tiledTextureIdx, row, maxRow, textureIdx, maxRow, maxCol);
+    return;
+  }
+
+  f32     uvHeight       = 1.0f / (f32)maxRow;
+  f32     uvWidth        = 1.0f / (f32)maxCol;
+
+  f32 uvWidthSplit = uvWidth / (f32)splitBy;
+
+  f32     uvY            = uvHeight * row;
+  f32     uvX            = uvWidth * col + uvWidthSplit * splitIdx;
+
+  GLfloat bufferData[20] = {
+      -1.0f, -1.0f, uvX,           uvY + uvHeight, //
+      1.0f,  -1.0f, uvX + uvWidthSplit, uvY + uvHeight, //
+      -1.0f, 1.0f,  uvX,           uvY,            //
+      1.0f,  1.0f,  uvX + uvWidthSplit, uvY             //
+  };
+
+  sta_glBindVertexArray(renderer->textureVertexId);
+  sta_glBindBuffer(GL_ARRAY_BUFFER, renderer->textureBufferId);
+  sta_glBufferData(GL_ARRAY_BUFFER, 16 * sizeof(GLfloat), bufferData, GL_STATIC_DRAW);
+
+  sta_renderTexture(renderer, &transMatrix, texture.texture->textureId);
+}
+
+void sta_renderTextureTile(Renderer* renderer, f32 x, f32 y, f32 z, f32 width, f32 height, u32 tiledTextureIdx, u32 textureIdx)
+{
+  Matrix4x4 transMatrix = {};
+  getTransformationMatrix(&transMatrix, x, y, z, width, height);
 
   TextureTiled texture = renderer->tiledTextures[tiledTextureIdx];
   u32          maxCol  = texture.texture->width / texture.dim;

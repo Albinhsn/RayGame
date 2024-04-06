@@ -19,9 +19,9 @@ typedef struct Vec4f32;
 #define CYAN   ((struct Vec4f32){0.0f, 1.0f, 1.0f, 1.0f})
 #define PURPLE ((struct Vec4f32){1.0f, 0.0f, 1.0f, 1.0f})
 #define BLUE   ((struct Vec4f32){1.0f, 0.0f, 0.0f, 1.0f})
-#define BLACK ((struct Vec4f32){0.0f, 0.0f, 0.0f, 0.0f})
-#define WHITE ((struct Vec4f32){1.0f, 1.0f, 1.0f, 1.0f})
-#define GRAY ((struct Vec4f32){0.5f, 0.5f, 0.5f, 0.5f})
+#define BLACK  ((struct Vec4f32){0.0f, 0.0f, 0.0f, 0.0f})
+#define WHITE  ((struct Vec4f32){1.0f, 1.0f, 1.0f, 1.0f})
+#define GRAY   ((struct Vec4f32){0.5f, 0.5f, 0.5f, 0.5f})
 
 struct Vec4u8
 {
@@ -199,6 +199,7 @@ struct Matrix4x4
 {
   union
   {
+    f32 a[16];
     f32 m[4][4];
     struct
     {
@@ -249,11 +250,8 @@ struct Matrix4x4         invertMat4x4(struct Matrix4x4 m);
 struct Matrix4x4         transposeMat4x4(struct Matrix4x4 m);
 struct Matrix3x3         transposeMat3x3(struct Matrix3x3 m);
 struct Matrix3x3         invertMat3x3(struct Matrix3x3 m);
+void                     MatMul4x4(Matrix4x4* res, Matrix4x4* a, Matrix4x4* b);
 void                     MatMul3x3(struct Matrix3x3* res, struct Matrix3x3* m1, struct Matrix3x3* m2);
-void                     MatMul3x32(Matrix3x3* res, Matrix3x3* a, Matrix3x3* b);
-void                     MatMul3x33(Matrix3x3* res, Matrix3x3* a, Matrix3x3* b);
-void                     MatMul3x34(Matrix3x3* res, Matrix3x3* a, Matrix3x3* b);
-struct Matrix4x4         MatMul4x4(struct Matrix4x4 m1, struct Matrix4x4 m2);
 struct Vec4f32           MatVecMul4x4(struct Matrix4x4 mat, struct Vec4f32 vec);
 struct Vec3f32           MatVecMul3x3(struct Matrix3x3 m, struct Vec3f32 v);
 
@@ -274,5 +272,5 @@ struct Vec3f32           crossProduct3D(struct Vec3f32 a, struct Vec3f32 b);
 i32                      crossProduct3DVector(struct Vec3i32 a, struct Vec3i32 b, struct Vec3i32 p);
 
 struct Vec3f32           randomPointOnSphere();
-void                     getTransformationMatrix(Matrix3x3* res, f32 x, f32 y, f32 width, f32 height);
+void                     getTransformationMatrix(Matrix4x4* res, f32 x, f32 y, f32 z, f32 width, f32 height);
 #endif

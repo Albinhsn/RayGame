@@ -108,9 +108,81 @@ inline f64 getDiff(f64 hitX, f64 hitY)
 
   return maxX > maxY ? yDiff : xDiff;
 }
+void render3DMap(Renderer* renderer, Map* map)
+{
+  f64 fovStep           = map->fov / 512.0f;
+  i64 screenWidth       = 1024 / 2;
+  i64 halvedScreenWidth = screenWidth / 2;
+  for (i64 i = -halvedScreenWidth; i < halvedScreenWidth; i++)
+  {
+    f64 r       = map->playerA + i * fovStep;
+    f64 step    = 0.1f;
+    f64 maxStep = MAX(map->height, map->width);
+    while (step < maxStep)
+    {
+      f64 currX = map->playerX + step * cos(r);
+      f64 currY = map->playerY + step * sin(r);
+      u64 tileX = currX;
+      u64 tileY = currY;
+
+      u8  tile  = map->tiles[COORDINATE_TO_INDEX_2D(tileX, tileY, map->width)];
+      if (tile != ' ')
+      {
+        f64 heightScale = cos(r - map->playerA) * (1 - step / MAX(map->height, map->width)) * 0.25f;
+
+        f64 x           = ((f64)i / (f64)halvedScreenWidth) * 50.0f + 50.0f;
+
+        f64 width       = 100.0f / 512.0f;
+        f64 height      = 200.0f * heightScale;
+        f64 z           = getDistance(currX, currY, map->playerX, map->playerY);
+
+        u32 splitBy     = 512;
+        u32 splitIdx    = (u64)((f64)(getDiff(currX, currY)) * splitBy);
+
+        sta_renderTextureTilePartOfCol(renderer, x, 0, z, width, height, TEXTURE_WALLS, tile - '0', splitBy, splitIdx);
+        break;
+      }
+      step += 0.05f;
+    }
+  }
+
+  u64    enemyCount = map->enemyCount;
+  Enemy* enemies    = map->enemies;
+  for (u64 i = 0; i < enemyCount; i++)
+  {
+    Enemy* enemy          = &enemies[i];
+
+    f64    xDiff          = enemy->x - map->playerX;
+    f64    yDiff          = enemy->y - map->playerY;
+
+    f64    enemyDirection = atan2(yDiff, xDiff);
+    while (enemyDirection - map->playerA > PI)
+    {
+      enemyDirection -= PI * 0.5f;
+    }
+    while (enemyDirection - map->playerA < -PI)
+    {
+      enemyDirection += PI * 0.5f;
+    }
+
+    f64 z       = getDistance(enemy->x, enemy->y, map->playerX, map->playerY);
+    f64 height  = 100.0f / z;
+    f64 dirDiff = enemyDirection - map->playerA;
+
+    f64 centerX = 50.0f;
+    f64 x       = centerX + (dirDiff / map->fov) * 100.0f;
+    f64 centerY = 0.0f;
+
+    f64 y       = centerY;
+    f64 width   = height / 2;
+    sta_renderTextureTile(renderer, x, y, z, width, height, TEXTURE_MONSTERS, i);
+  }
+}
 
 void render2DMap(Renderer* renderer, Map* map)
 {
+
+  sta_renderQuad(renderer->quadProgramId, renderer->quadVertexId, renderer->quadBufferId, &WHITE, -50.0, 0.0f, 1.0f, 100.0f, 100.0f);
   u64 height     = map->height;
   u64 width      = map->width;
 
@@ -125,7 +197,7 @@ void render2DMap(Renderer* renderer, Map* map)
       {
         f64 imageX = (normalizeExpected(x, width) - 100.0f) / 2 + tileWidth;
         f64 imageY = -normalizeExpected(y, height) - tileHeight;
-        sta_renderTextureTile(renderer, imageX, imageY, tileWidth, tileHeight, TEXTURE_WALLS, map->tiles[coordIdx] - '0');
+        sta_renderTextureTile(renderer, imageX, imageY, 0.0f, tileWidth, tileHeight, TEXTURE_WALLS, map->tiles[coordIdx] - '0');
       }
     }
   }
@@ -135,7 +207,7 @@ void render2DMap(Renderer* renderer, Map* map)
   f64 playerY = -normalizeExpected(map->playerY, height);
   f64 dim     = 1;
 
-  sta_renderQuad(renderer->quadProgramId, renderer->quadVertexId, renderer->quadBufferId, &GRAY, playerX, playerY, dim, dim);
+  sta_renderQuad(renderer->quadProgramId, renderer->quadVertexId, renderer->quadBufferId, &GRAY, playerX, playerY, 0.0f, dim, dim);
 
   // draw player fov
   f64 fovStep = map->fov / 512.0f;
@@ -174,6 +246,6 @@ void render2DMap(Renderer* renderer, Map* map)
 
     f64 dim    = 1;
 
-    sta_renderQuad(renderer->quadProgramId, renderer->quadVertexId, renderer->quadBufferId, &RED, enemyX, enemyY, dim, dim);
+    sta_renderQuad(renderer->quadProgramId, renderer->quadVertexId, renderer->quadBufferId, &RED, enemyX, enemyY, 0.0f, dim, dim);
   }
 }

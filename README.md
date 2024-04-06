@@ -3,15 +3,18 @@ Don't make me name things. Trying to extend the TinyRaycaster thing to an actual
 
 ## ToDo 
 * Essentially get back to the same point
-- [ ] read in a map and display it (as an image thingy)
-- [ ] drawRect api :), aka drawFilledQuad
-- [ ] draw Player
-- [ ] display fov
-- [ ] basic 3D
-- [ ] rotate it :)
-- [ ] add textures
-- [ ] add enemies
+- [x] read in a map and display it (as an image thingy)
+- [x] drawRect api :), aka drawFilledQuad
+- [x] draw Player
+- [x] display fov
+- [x] basic 3D
+- [x] rotate it :)
+- [x] add textures
+- [x] add enemies
 - [ ] create movement
-- [ ] create a gun
 - [ ] have enemies move towards you
+- [ ] create a gun
 - [ ] create some sort of map editor for it 
+- [ ] fix floor/ceil
+- [ ] create actual lighting? 
+
