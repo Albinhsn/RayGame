@@ -5,6 +5,30 @@
 #include <sys/time.h>
 #include <x86intrin.h>
 
+#include <SDL2/SDL_timer.h>
+
+void sta_resetTimer(Timer* timer)
+{
+  timer->running     = false;
+  timer->lastTick    = 0;
+  timer->serverTicks = 0;
+}
+void sta_updateTimer(Timer* timer)
+{
+  u64 tick = SDL_GetTicks();
+  timer->lastTick += tick - timer->serverTicks;
+  timer->serverTicks = tick;
+}
+void sta_startTimer(Timer* timer)
+{
+  timer->running     = true;
+  timer->serverTicks = SDL_GetTicks();
+}
+void sta_stopTimer(Timer* timer)
+{
+  timer->running = false;
+}
+
 Profiler      profiler;
 u32           globalProfilerParentIndex = 0;
 ProfileAnchor globalProfileAnchors[4096];

@@ -236,6 +236,77 @@ static void sta_setTextShaderParams(GLuint programId, Color* color)
   sta_glUniform4fv(location, 1, &c[0]);
 }
 
+void sta_renderTexture(Renderer* renderer, Matrix3x3* transMatrix, u32 textureIdx)
+{
+  sta_glUseProgram(renderer->textureProgramId);
+  sta_glBindVertexArray(renderer->textureVertexId);
+
+  glBindTexture(GL_TEXTURE_2D, textureIdx);
+
+  i32 location = sta_glGetUniformLocation(renderer->textureProgramId, "transMatrix");
+  if (location == -1)
+  {
+    printf("failed to set transMatrix\n");
+    exit(1);
+  }
+  sta_glUniformMatrix3fv(location, 1, true, (f32*)transMatrix);
+
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+  sta_glBindVertexArray(0);
+}
+
+void sta_renderTextureTile(Renderer* renderer, f32 x, f32 y, f32 width, f32 height, u32 tiledTextureIdx, u32 textureIdx)
+{
+  Matrix3x3 transMatrix = {};
+  getTransformationMatrix(&transMatrix, x, y, width, height);
+
+  TextureTiled texture = renderer->tiledTextures[tiledTextureIdx];
+  u32          maxCol  = texture.texture->width / texture.dim;
+  u32          maxRow  = texture.texture->height / texture.dim;
+  u32          row     = textureIdx / maxCol;
+  u32          col     = textureIdx % maxCol;
+
+  if (row >= maxRow)
+  {
+    printf("SEVERE: Trying to access outside of texture, tiledTexture %d, %d vs %d, textureIdx: %d, mr %d, mc %d\n", tiledTextureIdx, row, maxRow, textureIdx, maxRow, maxCol);
+    return;
+  }
+
+  f32     uvHeight       = 1.0f / (f32)maxRow;
+  f32     uvWidth        = 1.0f / (f32)maxCol;
+
+  f32     uvY            = uvHeight * row;
+  f32     uvX            = uvWidth * col;
+
+  GLfloat bufferData[20] = {
+      -1.0f, -1.0f, uvX,           uvY + uvHeight, //
+      1.0f,  -1.0f, uvX + uvWidth, uvY + uvHeight, //
+      -1.0f, 1.0f,  uvX,           uvY,            //
+      1.0f,  1.0f,  uvX + uvWidth, uvY             //
+  };
+
+  sta_glBindVertexArray(renderer->textureVertexId);
+  sta_glBindBuffer(GL_ARRAY_BUFFER, renderer->textureBufferId);
+  sta_glBufferData(GL_ARRAY_BUFFER, 16 * sizeof(GLfloat), bufferData, GL_STATIC_DRAW);
+
+  sta_renderTexture(renderer, &transMatrix, texture.texture->textureId);
+}
+
+// ToDo hoist this out to file
+void sta_initTiledTextures(Renderer* renderer)
+{
+  const u32    numberOfTiles = 2;
+  TextureModel tiles[]       = {TEXTURE_WALLS, TEXTURE_MONSTERS};
+  u32          tileCount[]   = {6, 4};
+  for (u32 i = 0; i < numberOfTiles; i++)
+  {
+    TextureTiled* tile = &renderer->tiledTextures[tiles[i]];
+    tile->texture      = &renderer->textures[tiles[i]];
+    tile->dim          = tile->texture->width / tileCount[i];
+    tile->count        = tileCount[i];
+  }
+}
+
 void sta_renderUnfilledQuad(GLuint programId, GLuint vertexArrayId, GLuint vertexBufferId, Vec2f32 start, Vec2f32 end, u32 width, Color* color)
 {
   sta_renderLine(programId, vertexArrayId, vertexBufferId, CREATE_VEC2f32(start.x, start.y), CREATE_VEC2f32(end.x, start.y), width, color);
@@ -421,18 +492,17 @@ void sta_generateTextures(Renderer* renderer, const char* textureLocations)
   u8 idx = 0;
   while (fgets(buffer, 256, filePtr))
   {
-    u32 width, height;
-    glGenTextures(1, &renderer->textures[idx]);
-    glBindTexture(GL_TEXTURE_2D, renderer->textures[idx]);
+    Texture* texture = &renderer->textures[idx];
+    glGenTextures(1, &texture->textureId);
+    glBindTexture(GL_TEXTURE_2D, texture->textureId);
 
     buffer[strlen(buffer) - 1] = '\0';
-    u8* data;
-    if (!sta_loadPNG(&data, &width, &height, buffer))
+    if (!sta_loadPNG(&texture->data, &texture->width, &texture->height, buffer))
     {
       sta_logVar(&GlobalLogger, LOGGING_LEVEL_WARNING, "Couldn't parse '%s'\n", buffer);
       continue;
     }
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture->width, texture->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture->data);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -441,7 +511,7 @@ void sta_generateTextures(Renderer* renderer, const char* textureLocations)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 
     sta_glGenerateMipmap(GL_TEXTURE_2D);
-    free(data);
+    free(texture->data);
     idx++;
   }
 }
@@ -505,13 +575,15 @@ void sta_initRenderer(Renderer* renderer, Font* font, const i32 screenWidth, con
   sta_generateTextures(renderer, TEXTURE_LOCATION);
   sta_createTextShaderProgram(&font->programId, "./resources/shaders/font.vs", "./resources/shaders/font.ps");
   sta_initFont(font, FONT_DATA_LOCATION);
-  font->textureId = renderer->textures[2];
+  font->textureId = renderer->textures[2].textureId;
 
   sta_createTextureShaderProgram(&renderer->textureProgramId, "./resources/shaders/texture.vs", "./resources/shaders/texture.ps");
   sta_createTextureVertexArray(renderer);
 
   sta_createLineShaderProgram(&renderer->lineProgramId, "./resources/shaders/line.vs", "./resources/shaders/line.ps");
   sta_createLineVertexArray(&renderer->lineVertexId, &renderer->lineBufferId);
+
+  sta_initTiledTextures(renderer);
 }
 
 void sta_renderLine(GLuint programId, GLuint vertexArrayId, GLuint vertexBufferId, Vec2f32 start, Vec2f32 end, u32 width, Color* color)

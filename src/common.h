@@ -2,6 +2,7 @@
 #define COMMON_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define FONT_DATA_LOCATION "resources/Fonts/font01.txt"
 #define TEXTURE_LOCATION   "resources/textures/textures01.txt"
@@ -36,6 +37,14 @@ typedef int64_t  i64;
 
 typedef float    f32;
 typedef double   f64;
+
+struct Timer
+{
+  u64  lastTick;
+  u64  serverTicks;
+  bool running;
+};
+typedef struct Timer Timer;
 
 #define PI 3.14159265358979
 
@@ -96,6 +105,11 @@ void                        exitProfileBlock(ProfileBlock* block);
 #define TimeBlock(blockName)
 #define TimeFunction
 #endif
+
+void sta_resetTimer(Timer* timer);
+void sta_updateTimer(Timer* timer);
+void sta_startTimer(Timer* timer);
+void sta_stopTimer(Timer* timer);
 
 void parseFloatFromString(float* dest, char* source, u8* length);
 void parseIntFromString(int* dest, char* source, u8* length);
