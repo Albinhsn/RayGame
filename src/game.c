@@ -114,7 +114,7 @@ void render2DMap(Renderer* renderer, Map* map)
   u64 height     = map->height;
   u64 width      = map->width;
 
-  f64 tileWidth  = 100.0f / width;
+  f64 tileWidth  = 50.0f / width;
   f64 tileHeight = 100.0f / height;
   for (u64 y = 0; y < height; y++)
   {
@@ -124,8 +124,7 @@ void render2DMap(Renderer* renderer, Map* map)
       if (map->tiles[coordIdx] != ' ')
       {
         f64 imageX = (normalizeExpected(x, width) - 100.0f) / 2 + tileWidth;
-        f64 imageY = -normalizeExpected(y, height);
-        printf("(%ld %ld) -> %lf %lf\n", x, y, imageX, imageY);
+        f64 imageY = -normalizeExpected(y, height) - tileHeight;
         sta_renderTextureTile(renderer, imageX, imageY, tileWidth, tileHeight, TEXTURE_WALLS, map->tiles[coordIdx] - '0');
       }
     }
