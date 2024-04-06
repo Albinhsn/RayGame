@@ -1,0 +1,3 @@
+./resources/textures/walltext.png
+./resources/textures/monsters.png
+./resources/Fonts/font03.png
