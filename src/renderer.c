@@ -2,6 +2,7 @@
 #include "common.h"
 #include "files.h"
 #include "logging.h"
+#include "sdl.h"
 #include "vector.h"
 #include <GL/gl.h>
 #include <GL/glext.h>
@@ -140,6 +141,14 @@ bool sta_createAndAttachShaders(GLuint* programId, const char* vsLocation, const
   return true;
 }
 
+void sta_createQuadShaderProgram(GLuint* programId, const char* vsLocation, const char* psLocation)
+{
+
+  sta_createAndAttachShaders(programId, vsLocation, psLocation);
+  sta_glBindAttribLocation(*programId, 0, "inputPosition");
+  sta_glLinkProgram(*programId);
+}
+
 void sta_createTextureShaderProgram(GLuint* programId, const char* vsLocation, const char* psLocation)
 {
 
@@ -179,6 +188,40 @@ void sta_createShaderProgram(GLuint* programId, const char* vsLocation, const ch
     sta_glBindAttribLocation(*programId, i, attribLocations[i]);
   }
   sta_glLinkProgram(*programId);
+}
+
+void sta_renderQuad(GLuint programId, GLuint vertexArrayId, GLuint vertexBufferId, Color* color, f32 x, f32 y, f32 width, f32 height)
+{
+  sta_glBindVertexArray(vertexArrayId);
+  sta_glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);
+
+  f32   minX           = (x - width / 2) * 0.01f;
+  f32   maxX           = (x + width / 2) * 0.01f;
+
+  f32   minY           = (y - height / 2)  * 0.01f;
+  f32   maxY           = (y + height / 2)  * 0.01f;
+
+  float bufferData[20] = {
+      minX, minY, 0.0f, //
+      maxX, minY, 0.0f, //
+      minX, maxY, 0.0f, //
+      maxX, maxY, 0.0f, //
+
+  };
+  sta_glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(GLfloat), bufferData, GL_STATIC_DRAW);
+
+  sta_glUseProgram(programId);
+  i32 location = sta_glGetUniformLocation(programId, "pixelColor");
+  if (location == -1)
+  {
+    printf("failed to set quad color\n");
+    exit(1);
+  }
+  f32 c[4] = {color->r, color->g, color->b, color->a};
+  sta_glUniform4fv(location, 1, &c[0]);
+
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+  sta_glBindVertexArray(0);
 }
 
 void sta_renderQuadTextureTransMatrix(GLuint programId, GLuint vertexArrayId, Matrix3x3* transMatrix, u32 textureIdx)
@@ -535,6 +578,36 @@ void sta_updateText(Font* font, const char* text, f32 x, f32 y, f32 fontSize, f3
   sta_glBindVertexArray(0);
 }
 
+void sta_createQuadVertexArray(Renderer* renderer)
+{
+  GLfloat bufferData[12] = {
+      -1.0f, -1.0f, 0.0f, //
+      1.0f,  -1.0f, 0.0f, //
+      -1.0f, 1.0f,  0.0f, //
+      1.0f,  1.0f,  0.0f, //
+  };
+  int    indices[6] = {0, 1, 2, 1, 3, 2};
+
+  GLuint indexBufferId;
+
+  sta_glGenVertexArrays(1, &renderer->quadVertexId);
+  sta_glBindVertexArray(renderer->quadVertexId);
+
+  sta_glGenBuffers(1, &renderer->quadBufferId);
+  sta_glBindBuffer(GL_ARRAY_BUFFER, renderer->quadBufferId);
+  sta_glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(GLfloat), bufferData, GL_STATIC_DRAW);
+
+  sta_glEnableVertexAttribArray(0);
+
+  sta_glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 3, 0);
+
+  sta_glGenBuffers(1, &indexBufferId);
+  sta_glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferId);
+  sta_glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(GLuint), indices, GL_STATIC_DRAW);
+
+  sta_glBindVertexArray(0);
+}
+
 void sta_createTextureVertexArray(Renderer* renderer)
 {
   GLfloat bufferData[20] = {
@@ -582,6 +655,9 @@ void sta_initRenderer(Renderer* renderer, Font* font, const i32 screenWidth, con
 
   sta_createLineShaderProgram(&renderer->lineProgramId, "./resources/shaders/line.vs", "./resources/shaders/line.ps");
   sta_createLineVertexArray(&renderer->lineVertexId, &renderer->lineBufferId);
+
+  sta_createQuadShaderProgram(&renderer->quadProgramId, "./resources/shaders/quad.vs", "./resources/shaders/quad.ps");
+  sta_createQuadVertexArray(renderer);
 
   sta_initTiledTextures(renderer);
 }

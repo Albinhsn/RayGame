@@ -60,6 +60,9 @@ struct Renderer
   GLuint        lineProgramId;
   GLuint        lineVertexId;
   GLuint        lineBufferId;
+  GLuint        quadProgramId;
+  GLuint        quadVertexId;
+  GLuint        quadBufferId;
   Font*         font;
   Texture       textures[32];
   TextureTiled  tiledTextures[5];
@@ -73,6 +76,7 @@ enum TextureModel
 
 typedef enum TextureModel TextureModel;
 
+void sta_renderQuad(GLuint programId, GLuint vertexArrayId, GLuint vertexBufferId, Color* color, f32 x, f32 y, f32 width, f32 height);
 void                      sta_renderTextureTile(Renderer* renderer, f32 x, f32 y, f32 width, f32 height, u32 tiledTextureIdx, u32 textureIdx);
 void                      sta_initRenderer(Renderer* renderer, Font* font, const i32 screenWidth, const i32 screenHeight);
 void                      sta_renderUnfilledQuad(GLuint programId, GLuint vertexArrayId, GLuint vertexBufferId, Vec2f32 start, Vec2f32 end, u32 width, Color* color);

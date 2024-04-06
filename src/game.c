@@ -130,61 +130,50 @@ void render2DMap(Renderer* renderer, Map* map)
     }
   }
 
-  // // draw player
-  // f64     playerX = ((map->playerX / map->width) * 200.0f - 100.0f) / 2;
-  // f64     playerY = -((map->playerY / map->height) * 200.0f - 100.0f);
-  // Vec2f32 start   = {};
-  // f64     dim     = 0.05;
-  // start.x         = playerX - dim;
-  // start.y         = playerY - dim;
-  // Vec2f32 end     = {};
-  // end.x           = playerX + dim;
-  // end.y           = playerY + dim;
+  // draw player
+  f64 playerX = (normalizeExpected(map->playerX, width) - 100.0f) / 2;
+  f64 playerY = -normalizeExpected(map->playerY, height);
+  f64 dim     = 1;
 
-  // sta_renderUnfilledQuad(renderer->lineProgramId, renderer->lineVertexId, renderer->lineBufferId, start, end, 1, &GRAY);
+  sta_renderQuad(renderer->quadProgramId, renderer->quadVertexId, renderer->quadBufferId, &GRAY, playerX, playerY, dim, dim);
 
-  // // draw player fov
-  // f64 fovStep = map->fov / 512.0f;
-  // for (i64 i = -256; i < 256; i++)
-  // {
-  //   f64 r    = map->playerA + i * fovStep;
-  //   f64 step = 0.1f;
-  //   while (true)
-  //   {
-  //     f32 x     = map->playerX + step * cos(r);
-  //     f32 y     = map->playerY + step * sin(r);
-  //     u64 tileX = x;
-  //     u64 tileY = y;
-  //     if (map->tiles[COORDINATE_TO_INDEX_2D(tileX, tileY, map->width)] != ' ')
-  //     {
-  //       Vec2f32 start = {};
-  //       start.x       = normalizeExpected(map->playerX, map->width) / 2;
-  //       start.y       = -normalizeExpected(map->playerY, map->height);
-  //       Vec2f32 end   = {};
-  //       end.x         = normalizeExpected(x, map->width) / 2;
-  //       end.y         = -normalizeExpected(y, map->height);
-  //       sta_renderLine(renderer->lineProgramId, renderer->lineVertexId, renderer->lineBufferId, start, end, 1, &GRAY);
-  //       break;
-  //     }
-  //     step += 0.05f;
-  //   }
-  // }
+  // draw player fov
+  f64 fovStep = map->fov / 512.0f;
+  for (i64 i = -256; i < 256; i++)
+  {
+    f64 r    = map->playerA + i * fovStep;
+    f64 step = 0.1f;
+    while (true)
+    {
+      f32 x     = map->playerX + step * cos(r);
+      f32 y     = map->playerY + step * sin(r);
+      u64 tileX = x;
+      u64 tileY = y;
+      if (map->tiles[COORDINATE_TO_INDEX_2D(tileX, tileY, map->width)] != ' ')
+      {
+        Vec2f32 start = {};
+        start.x       = (normalizeExpected(map->playerX, map->width) - 100.0f) / 2;
+        start.y       = -normalizeExpected(map->playerY, map->height);
+        Vec2f32 end   = {};
+        end.x         = (normalizeExpected(x, map->width) - 100.0f) / 2;
+        end.y         = -normalizeExpected(y, map->height);
+        sta_renderLine(renderer->lineProgramId, renderer->lineVertexId, renderer->lineBufferId, start, end, 1, &GRAY);
+        break;
+      }
+      step += 0.05f;
+    }
+  }
 
-  // // draw enemys
-  // u64    enemyCount = map->enemyCount;
-  // Enemy* enemies    = map->enemies;
-  // for (u64 i = 0; i < enemyCount; i++)
-  // {
-  //   f64     enemyX = ((enemies[i].x / map->width) * 200.0f - 100.0f) / 2;
-  //   f64     enemyY = -((enemies[i].y / map->width) * 200.0f - 100.0f) / 2;
-  //   Vec2f32 start  = {};
-  //   f64     dim    = 0.05;
-  //   start.x        = enemyX - dim;
-  //   start.y        = enemyY - dim;
-  //   Vec2f32 end    = {};
-  //   end.x          = enemyX + dim;
-  //   end.y          = enemyY + dim;
+  // draw enemys
+  u64    enemyCount = map->enemyCount;
+  Enemy* enemies    = map->enemies;
+  for (u64 i = 0; i < enemyCount; i++)
+  {
+    f64 enemyX = (normalizeExpected(enemies[i].x, map->width) - 100.0f) / 2;
+    f64 enemyY = -normalizeExpected(enemies[i].y, map->height);
 
-  //   sta_renderUnfilledQuad(renderer->lineProgramId, renderer->lineVertexId, renderer->lineBufferId, start, end, 1, &GRAY);
-  // }
+    f64 dim    = 1;
+
+    sta_renderQuad(renderer->quadProgramId, renderer->quadVertexId, renderer->quadBufferId, &RED, enemyX, enemyY, dim, dim);
+  }
 }
