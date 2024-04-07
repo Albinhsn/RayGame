@@ -133,10 +133,10 @@ void render3DMap(Renderer* renderer, Map* map)
         f64 x           = ((f64)i / (f64)halvedScreenWidth) * 50.0f + 50.0f;
 
         f64 width       = 100.0f / 512.0f;
-        f64 height      = 200.0f * heightScale;
+        f64 height      = 100.0f * heightScale;
         f64 z           = getDistance(currX, currY, map->playerX, map->playerY);
 
-        u32 splitBy     = 512;
+        u32 splitBy     = 256;
         u32 splitIdx    = (u64)((f64)(getDiff(currX, currY)) * splitBy);
 
         sta_renderTextureTilePartOfCol(renderer, x, 0, z, width, height, TEXTURE_WALLS, tile - '0', splitBy, splitIdx);
@@ -175,7 +175,7 @@ void render3DMap(Renderer* renderer, Map* map)
 
     f64 y       = centerY;
     f64 width   = height / 2;
-    sta_renderTextureTile(renderer, x, y, z, width, height, TEXTURE_MONSTERS, i);
+    sta_renderTextureTile(renderer, x, y, z, width, height, TEXTURE_MONSTERS, enemy->textureId);
   }
 }
 
