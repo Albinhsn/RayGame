@@ -78,7 +78,7 @@ bool sta_createAndCompileShader(GLuint* shaderId, GLenum glShaderMacro, const ch
   bool res      = sta_readFile(&arena, &buffer, source);
   if (!res)
   {
-    sta_logVar(&GlobalLogger, LOGGING_LEVEL_WARNING, "Failed to read shader from '%s'\n", source);
+    sta_log(&GlobalLogger, LOGGING_LEVEL_WARNING, "Failed to read shader from '%s'\n", source);
     return false;
   }
   *shaderId = sta_glCreateShader(glShaderMacro);
@@ -98,8 +98,7 @@ bool sta_createAndCompileShader(GLuint* shaderId, GLenum glShaderMacro, const ch
     infoLog[logSize - 1] = '\0';
 
     sta_glGetShaderInfoLog(*shaderId, logSize, NULL, infoLog);
-    printf("Failed to compile shader\n");
-    printf("%s\n", infoLog);
+    sta_log(&GlobalLogger, LOGGING_LEVEL_ERROR, "Failed to compile shader\n%s\n", infoLog);
     return false;
   }
 
@@ -214,8 +213,8 @@ void sta_renderQuad(GLuint programId, GLuint vertexArrayId, GLuint vertexBufferI
   i32 location = sta_glGetUniformLocation(programId, "pixelColor");
   if (location == -1)
   {
-    printf("failed to set quad color\n");
-    exit(1);
+    sta_log(&GlobalLogger, LOGGING_LEVEL_ERROR, "failed to set pixel color in filled quad shader\n");
+    return;
   }
   f32 c[4] = {color->r, color->g, color->b, color->a};
   sta_glUniform4fv(location, 1, &c[0]);
@@ -234,8 +233,8 @@ void sta_renderQuadTextureTransMatrix(GLuint programId, GLuint vertexArrayId, Ma
   i32 location = sta_glGetUniformLocation(programId, "transMatrix");
   if (location == -1)
   {
-    printf("failed to set transMatrix\n");
-    exit(1);
+    sta_log(&GlobalLogger, LOGGING_LEVEL_ERROR, "failed to set transMatrix in quad texture shader\n");
+    return;
   }
   sta_glUniformMatrix3fv(location, 1, true, (f32*)transMatrix);
 
@@ -250,8 +249,8 @@ static void sta_setLineShaderParams(GLuint programId, Color* color)
   int location = sta_glGetUniformLocation(programId, "pixelColor");
   if (location == -1)
   {
-    printf("Failed to get pixel color location\n");
-    exit(1);
+    sta_log(&GlobalLogger, LOGGING_LEVEL_ERROR, "failed to set pixel color location in line shader\n");
+    return;
   }
   f32 c[4] = {color->r, color->g, color->b, color->a};
   sta_glUniform4fv(location, 1, &c[0]);
@@ -264,16 +263,16 @@ static void sta_setTextShaderParams(GLuint programId, Color* color)
   i32 location = sta_glGetUniformLocation(programId, "fontTexture");
   if (location == -1)
   {
-    printf("Failed to get fontTexture location\n");
-    exit(1);
+    sta_log(&GlobalLogger, LOGGING_LEVEL_ERROR, "failed to set fontTexture location in text shader\n");
+    return;
   }
   sta_glUniform1i(location, 0);
 
   location = sta_glGetUniformLocation(programId, "pixelColor");
   if (location == -1)
   {
-    printf("Failed to get pixel color location\n");
-    exit(1);
+    sta_log(&GlobalLogger, LOGGING_LEVEL_ERROR, "failed to set pixel color location in text shader\n");
+    return;
   }
   f32 c[4] = {color->r, color->g, color->b, color->a};
   sta_glUniform4fv(location, 1, &c[0]);
@@ -289,8 +288,8 @@ void sta_renderTexture(Renderer* renderer, Matrix4x4* transMatrix, u32 textureId
   i32 location = sta_glGetUniformLocation(renderer->textureProgramId, "transMatrix");
   if (location == -1)
   {
-    printf("failed to set transMatrix\n");
-    exit(1);
+    sta_log(&GlobalLogger, LOGGING_LEVEL_ERROR, "failed to set pixel transMatrix in renderTexture\n");
+    return;
   }
   sta_glUniformMatrix4fv(location, 1, true, (f32*)transMatrix);
 
@@ -311,23 +310,36 @@ void sta_renderTextureTilePartOfCol(Renderer* renderer, f32 x, f32 y, f32 z, f32
 
   if (row >= maxRow)
   {
-    printf("SEVERE: Trying to access outside of texture, tiledTexture %d, %d vs %d, textureIdx: %d, mr %d, mc %d\n", tiledTextureIdx, row, maxRow, textureIdx, maxRow, maxCol);
+    sta_log(&GlobalLogger, LOGGING_LEVEL_ERROR, "Trying to access outside of texture, tiledTexture %d, %d vs %d, textureIdx: %d, mr %d, mc %d\n", tiledTextureIdx, row, maxRow, textureIdx, maxRow,
+            maxCol);
     return;
   }
 
   f32     uvHeight       = 1.0f / (f32)maxRow;
   f32     uvWidth        = 1.0f / (f32)maxCol;
 
-  f32 uvWidthSplit = uvWidth / (f32)splitBy;
+  f32     uvWidthSplit   = uvWidth / (f32)splitBy;
 
   f32     uvY            = uvHeight * row;
   f32     uvX            = uvWidth * col + uvWidthSplit * splitIdx;
 
   GLfloat bufferData[20] = {
-      -1.0f, -1.0f, uvX,           uvY + uvHeight, //
-      1.0f,  -1.0f, uvX + uvWidthSplit, uvY + uvHeight, //
-      -1.0f, 1.0f,  uvX,           uvY,            //
-      1.0f,  1.0f,  uvX + uvWidthSplit, uvY             //
+      -1.0f,
+      -1.0f,
+      uvX,
+      uvY + uvHeight, //
+      1.0f,
+      -1.0f,
+      uvX + uvWidthSplit,
+      uvY + uvHeight, //
+      -1.0f,
+      1.0f,
+      uvX,
+      uvY, /**/
+      1.0f,
+      1.0f,
+      uvX + uvWidthSplit,
+      uvY //
   };
 
   sta_glBindVertexArray(renderer->textureVertexId);
@@ -350,7 +362,8 @@ void sta_renderTextureTile(Renderer* renderer, f32 x, f32 y, f32 z, f32 width, f
 
   if (row >= maxRow)
   {
-    printf("SEVERE: Trying to access outside of texture, tiledTexture %d, %d vs %d, textureIdx: %d, mr %d, mc %d\n", tiledTextureIdx, row, maxRow, textureIdx, maxRow, maxCol);
+    sta_log(&GlobalLogger, LOGGING_LEVEL_ERROR, "Trying to access outside of texture, tiledTexture %d, %d vs %d, textureIdx: %d, mr %d, mc %d\n", tiledTextureIdx, row, maxRow, textureIdx, maxRow,
+            maxCol);
     return;
   }
 
@@ -496,7 +509,7 @@ void sta_buildUpdatedTextVertexArray(Font* font, f32* vertices, u32 vertexCount,
   i32 numLetters   = strlen(text);
   if (numLetters > TEXT_MAX_LENGTH)
   {
-    printf("WARNING: Trying to write text with %d characters, %d is max", numLetters, TEXT_MAX_LENGTH);
+    sta_log(&GlobalLogger, LOGGING_LEVEL_WARNING, "WARNING: Trying to write text with %d characters, %d is max", numLetters, TEXT_MAX_LENGTH);
     numLetters = TEXT_MAX_LENGTH;
   }
 
@@ -566,7 +579,7 @@ void sta_generateTextures(Renderer* renderer, const char* textureLocations)
   FILE* filePtr = fopen(textureLocations, "rb");
   if (filePtr == 0)
   {
-    sta_logVar(&GlobalLogger, LOGGING_LEVEL_WARNING, "Failed to open texture location '%s'\n", textureLocations);
+    sta_log(&GlobalLogger, LOGGING_LEVEL_WARNING, "Failed to open texture location '%s'\n", textureLocations);
     return;
   }
   char buffer[256];
@@ -581,7 +594,7 @@ void sta_generateTextures(Renderer* renderer, const char* textureLocations)
     buffer[strlen(buffer) - 1] = '\0';
     if (!sta_loadPNG(&texture->data, &texture->width, &texture->height, buffer))
     {
-      sta_logVar(&GlobalLogger, LOGGING_LEVEL_WARNING, "Couldn't parse '%s'\n", buffer);
+      sta_log(&GlobalLogger, LOGGING_LEVEL_WARNING, "Couldn't parse '%s'\n", buffer);
       continue;
     }
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture->width, texture->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture->data);

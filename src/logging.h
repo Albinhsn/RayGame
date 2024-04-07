@@ -20,10 +20,8 @@ enum LoggingLevel
 };
 typedef enum LoggingLevel LoggingLevel;
 
-void                      sta_log(Logger* logger, LoggingLevel level, String msg);
-
 void                      sta_initGlobalLogger();
-void sta_logVar(Logger* logger, LoggingLevel level, const char* msg, ...);
+void                      sta_log(Logger* logger, LoggingLevel level, const char* msg, ...);
 bool                      sta_initLogger(Logger* logger, String fileName);
 bool                      sta_destroyLogger(Logger* logger);
 

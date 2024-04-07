@@ -114,4 +114,6 @@ void sta_stopTimer(Timer* timer);
 void parseFloatFromString(float* dest, char* source, u8* length);
 void parseIntFromString(int* dest, char* source, u8* length);
 
+void getInfoStrings(char* msString, char* fpsString, u64* lastTick, u64* previousTick);
+
 #endif

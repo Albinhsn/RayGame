@@ -1,6 +1,7 @@
 #include "files.h"
 #include "arena.h"
 #include "lodepng.h"
+#include "logging.h"
 #include <string.h>
 
 bool sta_loadPNG(u8** data, u32* width, u32* height, const char* filename)
@@ -10,7 +11,7 @@ bool sta_loadPNG(u8** data, u32* width, u32* height, const char* filename)
   error = lodepng_decode32_file(data, width, height, filename);
   if (error != 0)
   {
-    printf("Failed to decode png '%s'\n", filename);
+    sta_log(&GlobalLogger, LOGGING_LEVEL_WARNING, "Failed to decode png '%s'\n", filename);
     return false;
   }
 
@@ -25,7 +26,7 @@ bool sta_writePPM(String fileName, Image* image)
   FILE* filePtr = fopen(buffer, "w");
   if (filePtr == 0)
   {
-    printf("Failed to open %.*s\n", (i32)fileName.len, fileName.buffer);
+    sta_log(&GlobalLogger, LOGGING_LEVEL_WARNING, "Failed to open %.*s\n", (i32)fileName.len, fileName.buffer);
     return false;
   }
 
@@ -100,14 +101,14 @@ bool sta_loadTarga(Arena* arena, Image* image, const char* filename)
   filePtr = fopen(filename, "rb");
   if (filePtr == NULL)
   {
-    printf("ERROR: file doesn't exist %s\n", filename);
+    sta_log(&GlobalLogger, LOGGING_LEVEL_WARNING, "file doesn't exist %s\n", filename);
     return false;
   }
 
   count = fread(&targaFileHeader, sizeof(struct TargaHeader), 1, filePtr);
   if (count != 1)
   {
-    printf("ERROR: Failed to read into header\n");
+    sta_log(&GlobalLogger, LOGGING_LEVEL_WARNING, "Failed to read into header\n");
     return false;
   }
 
@@ -129,7 +130,7 @@ bool sta_loadTarga(Arena* arena, Image* image, const char* filename)
   count       = fread(image->data, 1, imageSize, filePtr);
   if (count != imageSize)
   {
-    printf("ERROR: count read doesn't equal imageSize\n");
+    sta_log(&GlobalLogger, LOGGING_LEVEL_WARNING, "count read doesn't equal imageSize\n");
     return false;
   }
 
